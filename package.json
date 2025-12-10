@@ -1,0 +1,27 @@
+{
+  "name": "benchmark-agentic-tooling",
+  "version": "0.1.0",
+  "description": "AI-Driven Web Performance Benchmark Tool using Playwright and Performance Observers",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "benchmark": "node src/index.js"
+  },
+  "keywords": [
+    "performance",
+    "benchmark",
+    "playwright",
+    "web-vitals",
+    "performance-observer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "playwright": "^1.57.0"
+  },
+  "packageManager": "pnpm@8.0.0"
+}
