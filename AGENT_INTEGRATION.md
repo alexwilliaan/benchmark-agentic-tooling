@@ -7,7 +7,7 @@ Your benchmark tool now supports **universal agent integration** through multipl
 ### 1. MCP Protocol (Recommended for MCP-compatible agents)
 ```bash
 # Generic MCP server
-node src/agent/generic-mcp-server.js
+node src/agent/mcp-server.js
 ```
 
 ### 2. HTTP API (For any agent that can make HTTP requests)
@@ -36,7 +36,7 @@ node src/agent/cli-wrapper.js benchmark https://example.com
   "mcpServers": {
     "benchmark-tool": {
       "command": "node",
-      "args": ["/home/alex/Dev/benchmark-agentic-tooling/src/agent/generic-mcp-server.js"]
+      "args": ["/path/to/benchmark-agentic-tooling/src/agent/mcp-server.js"]
     }
   }
 }
@@ -175,7 +175,7 @@ PLAYWRIGHT_HEADLESS=true
 
 ```bash
 # Test MCP server
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/agent/generic-mcp-server.js
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/agent/mcp-server.js
 
 # Test HTTP API
 curl http://localhost:4001/health

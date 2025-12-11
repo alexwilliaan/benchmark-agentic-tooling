@@ -15,7 +15,7 @@ import { executeFlow } from './executor.js';
  * - Custom MCP clients
  * 
  * Usage:
- *   node src/agent/generic-mcp-server.js
+ *   node src/agent/mcp-server.js
  * 
  * Or configure in your MCP client's config file to point to this script.
  */

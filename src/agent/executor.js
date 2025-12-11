@@ -166,8 +166,8 @@ async function executeStep(page, decision) {
             }
             await page.goto(value, { waitUntil: 'load' });
             
-            // Very long wait to ensure all SPA content loads
-            await page.waitForTimeout(20000); // 20 seconds total wait
+            // Wait for SPA content to load
+            await page.waitForTimeout(3000);
             
             // Ensure page is fully rendered
             await page.waitForFunction(() => {
@@ -175,21 +175,12 @@ async function executeStep(page, decision) {
                        document.body && 
                        document.body.innerText.trim().length > 100;
             }, { timeout: 10000 });
-            
-            // Force metrics collection after full load
-            await page.evaluate(() => {
-                // Trigger any lazy loading or dynamic content
-                window.dispatchEvent(new Event('scroll'));
-                window.dispatchEvent(new Event('resize'));
-            });
-            
-            await page.waitForTimeout(2000); // Additional wait for triggered content
             break;
 
         case 'wait':
-            // Simple wait for SPA to load
+            // Wait for SPA to load
             console.log('⏳ Waiting for page to fully load...');
-            await page.waitForTimeout(5000); // Wait 5 seconds for full load
+            await page.waitForTimeout(2000);
             break;
 
         case 'click':
