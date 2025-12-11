@@ -207,7 +207,7 @@ export class BenchmarkExecutor {
                 this.page.evaluate(() => {
                     return window.__BENCHMARK_METRICS__;
                 }),
-                new Promise((_, reject) => 
+                new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Metrics extraction timeout')), 5000)
                 )
             ]);
@@ -224,7 +224,7 @@ export class BenchmarkExecutor {
         try {
             await Promise.race([
                 this.collectCDPMetrics(),
-                new Promise((_, reject) => 
+                new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('CDP metrics collection timeout')), 5000)
                 )
             ]);
@@ -232,9 +232,18 @@ export class BenchmarkExecutor {
             console.warn('Failed to collect CDP metrics:', error.message);
         }
 
+        // Ensure observerMetrics has the required structure
+        const safeObserverMetrics = observerMetrics || {
+            vitals: { lcp: 0, cls: 0, inp: 0 },
+            diagnostics: { longTasks: 0, longTasksTotalDuration: 0, scripts: [] },
+            interactions: []
+        };
+
         // Combine all metrics
         const combinedMetrics = {
-            ...observerMetrics,
+            vitals: safeObserverMetrics.vitals || { lcp: 0, cls: 0, inp: 0 },
+            diagnostics: safeObserverMetrics.diagnostics || { longTasks: 0, longTasksTotalDuration: 0, scripts: [] },
+            interactions: safeObserverMetrics.interactions || [],
             cdp: {
                 tbt: this.cdpMetrics.tbt,
                 jsHeap: {

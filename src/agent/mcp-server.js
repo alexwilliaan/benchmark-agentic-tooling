@@ -177,49 +177,52 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         return { action: 'done', target: '', value: '' };
                     }
 
-                    // Check if we've already waited and should be done
-                    const hasWaited = history.some(step => step.action === 'wait');
-                    console.log(`🔍 Has waited: ${hasWaited}, History: ${JSON.stringify(history)}`);
-                    if (hasWaited) {
-                        return { action: 'done', target: '', value: '' };
-                    }
-
-                    // Look for navigation instructions - only if we haven't navigated yet
-                    if ((lowerInstruction.includes('navigate') || lowerInstruction.includes('go to')) && history.length === 0) {
-                        const urlMatch = instruction.match(/https?:\/\/[^\s]+/);
-                        if (urlMatch) {
-                            return { action: 'navigate', target: '', value: urlMatch[0] };
+                    // Step 1: Navigate (if we haven't navigated yet)
+                    const hasNavigated = history.some(step => step.action === 'navigate');
+                    if (!hasNavigated) {
+                        // Look for navigation instructions
+                        if (lowerInstruction.includes('navigate') || lowerInstruction.includes('go to')) {
+                            const urlMatch = instruction.match(/https?:\/\/[^\s]+/);
+                            if (urlMatch) {
+                                return { action: 'navigate', target: '', value: urlMatch[0] };
+                            }
+                        }
+                        // If no URL in instruction, check if url parameter was provided
+                        if (url) {
+                            return { action: 'navigate', target: '', value: url };
                         }
                     }
 
-                    // If we've navigated and the instruction mentions waiting, actually wait
-                    if (history.length > 0 && (lowerInstruction.includes('wait') || lowerInstruction.includes('load'))) {
+                    // Step 2: Wait for page to load (if we've navigated but haven't waited yet)
+                    const hasWaited = history.some(step => step.action === 'wait');
+                    if (hasNavigated && !hasWaited) {
                         return { action: 'wait', target: '', value: '' };
                     }
 
-                    // Look for fill instructions
-                    if (lowerInstruction.includes('fill') || lowerInstruction.includes('enter')) {
-                        if (lowerSnapshot.includes('email') || lowerSnapshot.includes('username')) {
-                            return { action: 'fill', target: 'email input', value: 'test@example.com' };
+                    // Step 3: After navigation and waiting, check for interaction instructions
+                    if (hasNavigated && hasWaited) {
+                        // Look for fill instructions
+                        if (lowerInstruction.includes('fill') || lowerInstruction.includes('enter')) {
+                            if (lowerSnapshot.includes('email') || lowerSnapshot.includes('username')) {
+                                return { action: 'fill', target: 'email input', value: 'test@example.com' };
+                            }
+                            if (lowerSnapshot.includes('password')) {
+                                return { action: 'fill', target: 'password input', value: 'test123' };
+                            }
                         }
-                        if (lowerSnapshot.includes('password')) {
-                            return { action: 'fill', target: 'password input', value: 'test123' };
-                        }
-                    }
 
-                    // Look for click instructions
-                    if (lowerInstruction.includes('click') || lowerInstruction.includes('submit') || lowerInstruction.includes('login')) {
-                        if (lowerSnapshot.includes('button') || lowerSnapshot.includes('submit')) {
-                            return { action: 'click', target: 'submit button', value: '' };
+                        // Look for click instructions
+                        if (lowerInstruction.includes('click') || lowerInstruction.includes('submit') || lowerInstruction.includes('login')) {
+                            if (lowerSnapshot.includes('button') || lowerSnapshot.includes('submit')) {
+                                return { action: 'click', target: 'submit button', value: '' };
+                            }
                         }
-                    }
 
-                    // Default: if we've done something and no specific action needed, we're done
-                    if (history.length > 0) {
+                        // If no specific interaction needed, we're done
                         return { action: 'done', target: '', value: '' };
                     }
 
-                    // Otherwise wait
+                    // Default: wait
                     return { action: 'wait', target: '', value: '' };
                 };
 
