@@ -57,12 +57,14 @@ export async function executeFlow(page, flowDescription, agentDecide) {
             await executeStep(page, decision);
 
             // Record in history
+            // Capture what we attempted for validation/reporting
             history.push({
                 step: stepCount,
                 url: context.url,
                 action: decision.action,
                 target: decision.target,
-                value: decision.value ? '***' : undefined, // Mask sensitive values
+                // Keep navigation/back URLs, mask only potentially sensitive form fills
+                value: decision.action === 'fill' ? '***' : decision.value,
                 timestamp: Date.now() - startTime,
             });
 
@@ -181,6 +183,13 @@ async function executeStep(page, decision) {
             // Wait for SPA to load
             console.log('⏳ Waiting for page to fully load...');
             await page.waitForTimeout(2000);
+            break;
+
+        case 'back':
+            // Navigate back in history (e.g., return to home)
+            console.log('↩️ Going back to previous page...');
+            await page.goBack({ waitUntil: 'load' });
+            await page.waitForTimeout(1500);
             break;
 
         case 'click':
