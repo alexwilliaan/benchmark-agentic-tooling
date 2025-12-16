@@ -38,66 +38,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
             {
-                name: 'run_benchmark',
-                description: 'Run a performance benchmark on a URL and get detailed metrics',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        url: {
-                            type: 'string',
-                            description: 'URL to benchmark (must include protocol, e.g., https://example.com)',
-                        },
-                        viewport: {
-                            type: 'object',
-                            description: 'Optional viewport configuration',
-                            properties: {
-                                width: { type: 'number', default: 1920 },
-                                height: { type: 'number', default: 1080 },
-                            },
-                        },
-                        timeout: {
-                            type: 'number',
-                            description: 'Optional timeout in milliseconds (default: 30000)',
-                            default: 30000,
-                        },
-                    },
-                    required: ['url'],
-                },
-            },
-            {
-                name: 'run_flow',
-                description: 'Execute a natural language user flow and measure performance',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        flow: {
-                            type: 'string',
-                            description: 'Natural language description of the user flow to execute',
-                        },
-                        url: {
-                            type: 'string',
-                            description: 'Starting URL (optional, flow can specify navigation)',
-                        },
-                        maxSteps: {
-                            type: 'number',
-                            description: 'Maximum number of steps to execute (default: 20)',
-                            default: 20,
-                        },
-                        viewport: {
-                            type: 'object',
-                            description: 'Optional viewport configuration',
-                            properties: {
-                                width: { type: 'number', default: 1920 },
-                                height: { type: 'number', default: 1080 },
-                            },
-                        },
-                    },
-                    required: ['flow'],
-                },
-            },
-            {
-                name: 'analyze_page',
-                description: 'Analyze a page for performance issues without full benchmark',
+                name: 'analyze_site',
+                description: 'Analyze a site by opening it, waiting for load, and collecting metrics.',
                 inputSchema: {
                     type: 'object',
                     properties: {
@@ -105,16 +47,49 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                             type: 'string',
                             description: 'URL to analyze',
                         },
-                        metrics: {
-                            type: 'array',
-                            description: 'Specific metrics to collect (default: all)',
-                            items: {
-                                type: 'string',
-                                enum: ['lcp', 'inp', 'cls', 'tbt', 'js-heap', 'long-tasks', 'network', 'errors'],
+                        viewport: {
+                            type: 'object',
+                            description: 'Optional viewport configuration',
+                            properties: {
+                                width: { type: 'number', default: 1920 },
+                                height: { type: 'number', default: 1080 },
                             },
                         },
                     },
                     required: ['url'],
+                },
+            },
+            {
+                name: 'run_flow',
+                description: 'Execute a guided user flow with specific instructions',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        url: {
+                            type: 'string',
+                            description: 'Starting URL',
+                        },
+                        instructions: {
+                            type: 'array',
+                            description: 'List of instructions to execute',
+                            items: {
+                                type: 'string',
+                            },
+                        },
+                        args: {
+                            type: 'object',
+                            description: 'Optional arguments/variables for the flow',
+                        },
+                        viewport: {
+                            type: 'object',
+                            description: 'Optional viewport configuration',
+                            properties: {
+                                width: { type: 'number', default: 1920 },
+                                height: { type: 'number', default: 1080 },
+                            },
+                        },
+                    },
+                    required: ['url', 'instructions'],
                 },
             },
         ],
@@ -127,21 +102,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     try {
         switch (name) {
-            case 'run_benchmark': {
-                const { url, viewport = { width: 1920, height: 1080 }, timeout = 30000 } = args;
+            case 'analyze_site': {
+                const { url, viewport = { width: 1920, height: 1080 } } = args;
 
-                // Validate URL
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                     throw new Error('URL must include protocol (http:// or https://)');
                 }
 
                 const executor = new BenchmarkExecutor();
+                // Note: Viewport config needs to be passed to BenchmarkExecutor if supported
 
-                // Configure viewport if specified
-                if (viewport && (viewport.width !== 1920 || viewport.height !== 1080)) {
-                    // Note: You'll need to add viewport configuration to BenchmarkExecutor
-                }
-
+                // For analyze_site, we just run the standard benchmark which does Open -> Wait -> Collect
                 const metrics = await executor.runBenchmark(url);
                 const report = generateReport(metrics, url);
 
@@ -160,90 +131,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
 
             case 'run_flow': {
-                const { flow, url, maxSteps = 20, viewport = { width: 1920, height: 1080 } } = args;
-
-                // Create a generic agent decide function that works with any MCP client
-                const agentDecide = async (snapshot, instruction, history) => {
-                    // This is where different AI agents would make decisions
-                    // For generic MCP, we provide a simple rule-based approach
-                    // The actual AI decision making would be handled by the MCP client
-
-                    // Simple heuristic-based decisions for common patterns
-                    const lowerInstruction = instruction.toLowerCase();
-                    const lowerSnapshot = snapshot.toLowerCase();
-
-                    // Check if we're done
-                    if (lowerInstruction.includes('done') || lowerInstruction.includes('complete')) {
-                        return { action: 'done', target: '', value: '' };
-                    }
-
-                    // Step 1: Navigate (if we haven't navigated yet)
-                    const hasNavigated = history.some(step => step.action === 'navigate');
-                    if (!hasNavigated) {
-                        // Look for navigation instructions
-                        if (lowerInstruction.includes('navigate') || lowerInstruction.includes('go to')) {
-                            const urlMatch = instruction.match(/https?:\/\/[^\s]+/);
-                            if (urlMatch) {
-                                return { action: 'navigate', target: '', value: urlMatch[0] };
-                            }
-                        }
-                        // If no URL in instruction, check if url parameter was provided
-                        if (url) {
-                            return { action: 'navigate', target: '', value: url };
-                        }
-                    }
-
-                    // Step 2: Wait for page to load (if we've navigated but haven't waited yet)
-                    const hasWaited = history.some(step => step.action === 'wait');
-                    if (hasNavigated && !hasWaited) {
-                        return { action: 'wait', target: '', value: '' };
-                    }
-
-                    // Step 3: After navigation and waiting, check for interaction instructions
-                    if (hasNavigated && hasWaited) {
-                        // Look for fill instructions
-                        if (lowerInstruction.includes('fill') || lowerInstruction.includes('enter')) {
-                            if (lowerSnapshot.includes('email') || lowerSnapshot.includes('username')) {
-                                return { action: 'fill', target: 'email input', value: 'test@example.com' };
-                            }
-                            if (lowerSnapshot.includes('password')) {
-                                return { action: 'fill', target: 'password input', value: 'test123' };
-                            }
-                        }
-
-                        // Look for click instructions
-                        if (lowerInstruction.includes('click') || lowerInstruction.includes('submit') || lowerInstruction.includes('login')) {
-                            if (lowerSnapshot.includes('button') || lowerSnapshot.includes('submit')) {
-                                return { action: 'click', target: 'submit button', value: '' };
-                            }
-                        }
-
-                        // If no specific interaction needed, we're done
-                        return { action: 'done', target: '', value: '' };
-                    }
-
-                    // Default: wait
-                    return { action: 'wait', target: '', value: '' };
-                };
+                const { url, instructions, args: flowArgs = {}, viewport = { width: 1920, height: 1080 } } = args;
 
                 const executor = new BenchmarkExecutor();
                 await executor.initialize();
-                await executor.launch();
+                await executor.launch(); // We might need to pass viewport here if executor supports it
 
-                // Don't navigate here - let the flow handle navigation
+                // 1. Open the starting URL
+                await executor.page.goto(url, { waitUntil: 'domcontentloaded' });
 
-                // Parse the flow into structured plan
-                const plan = parseFlowInstructions(flow);
-                console.log('📋 Parsed flow plan:', JSON.stringify(plan, null, 2));
+                // 2. Parse instructions
+                const executionPlan = parseInstructions(instructions, flowArgs);
 
-                // Execute the flow
-                const flowResult = await executeFlow(executor.page, flow, agentDecide);
+                // Validate plan
+                const invalidSteps = executionPlan.filter(step => step.action === 'unknown');
+                if (invalidSteps.length > 0) {
+                    throw new Error(`Invalid instructions detected:\n${invalidSteps.map(s => `  - "${s.original}"`).join('\n')}`);
+                }
 
-                // Extract metrics after flow completion
+                console.log('📋 Parsed flow plan:', JSON.stringify(executionPlan, null, 2));
+
+                // 3. Execute flow
+                const flowResult = await executeFlow(executor.page, executionPlan);
+
+                // 4. Extract metrics
                 const metrics = await executor.extractMetrics();
                 await executor.close();
 
-                const report = generateReport(metrics, `Flow: ${flow}`);
+                const report = generateReport(metrics, `Flow on ${url}`);
 
                 let result = report;
 
@@ -254,47 +169,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     result += `Steps executed: ${flowResult.steps}\n`;
                     result += `Duration: ${(flowResult.duration / 1000).toFixed(2)}s\n\n`;
 
-                    // Show parsed plan
-                    result += '📝 Parsed Plan:\n';
-                    plan.forEach((action, i) => {
-                        result += `  ${i + 1}. ${action.type}: ${action.description}\n`;
-                    });
-                    result += '\n';
-
-                    // Validate execution against plan
-                    const validation = validateFlowExecution(plan, flowResult.history);
-                    if (!validation.success) {
-                        result += '❌ VALIDATION FAILED\n';
-                        validation.errors.forEach(err => {
-                            result += `  - ${err}\n`;
-                        });
-                        result += '\n';
-                    } else {
-                        result += '✅ Validation Passed: All instructions appear to be executed.\n\n';
-                    }
-
                     result += 'Action history:\n';
                     flowResult.history.forEach((step, i) => {
                         result += `  ${i + 1}. ${step.action} ${step.target || ''} (${step.timestamp}ms)\n`;
                     });
-
-                    // If validation failed, mark the tool result as error
-                    if (!validation.success) {
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: result,
-                                },
-                                {
-                                    type: 'text',
-                                    text: `\n\n**Raw Metrics JSON:**\n\`\`\`json\n${JSON.stringify(metrics, null, 2)}\n\`\`\``,
-                                },
-                            ],
-                            isError: true,
-                        };
-                    }
                 }
+
+                const resultData = {
+                    ...metrics,
+                    flow: flowResult
+                };
 
                 return {
                     content: [
@@ -304,64 +188,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         },
                         {
                             type: 'text',
-                            text: `\n\n**Raw Metrics JSON:**\n\`\`\`json\n${JSON.stringify(metrics, null, 2)}\n\`\`\``,
-                        },
-                    ],
-                };
-            }
-
-            case 'analyze_page': {
-                const { url, metrics } = args;
-
-                const executor = new BenchmarkExecutor();
-                await executor.initialize();
-                await executor.launch();
-
-                await executor.page.goto(url, { waitUntil: 'domcontentloaded' });
-
-                // Extract specific metrics
-                const pageMetrics = await executor.extractMetrics();
-                await executor.close();
-
-                // Filter metrics if specified
-                let filteredMetrics = pageMetrics;
-                if (metrics && metrics.length > 0) {
-                    filteredMetrics = {};
-                    metrics.forEach(metric => {
-                        switch (metric) {
-                            case 'lcp':
-                                filteredMetrics.lcp = pageMetrics.lcp;
-                                break;
-                            case 'inp':
-                                filteredMetrics.inp = pageMetrics.inp;
-                                break;
-                            case 'cls':
-                                filteredMetrics.cls = pageMetrics.cls;
-                                break;
-                            case 'tbt':
-                                filteredMetrics.tbt = pageMetrics.tbt;
-                                break;
-                            case 'js-heap':
-                                filteredMetrics.jsHeap = pageMetrics.jsHeap;
-                                break;
-                            case 'long-tasks':
-                                filteredMetrics.longTasks = pageMetrics.longTasks;
-                                break;
-                            case 'network':
-                                filteredMetrics.requests = pageMetrics.requests;
-                                break;
-                            case 'errors':
-                                filteredMetrics.errors = pageMetrics.errors;
-                                break;
-                        }
-                    });
-                }
-
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: `**Page Analysis for ${url}**\n\n\`\`\`json\n${JSON.stringify(filteredMetrics, null, 2)}\n\`\`\``,
+                            text: `\n\n**Raw Metrics JSON:**\n\`\`\`json\n${JSON.stringify(resultData, null, 2)}\n\`\`\``,
                         },
                     ],
                 };
@@ -384,94 +211,76 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 /**
- * Parse natural language flow into structured action plan
- * @param {string} flowInstruction - Natural language flow description
- * @returns {Array} Array of action objects { type, target, value }
+ * Parses list of string instructions into action objects
+ * @param {string[]} instructions 
+ * @param {object} args 
  */
-function parseFlowInstructions(flowInstruction) {
-    const plan = [];
-    const text = flowInstruction.toLowerCase();
+function parseInstructions(instructions, args) {
+    return instructions.map(instruction => {
+        const parts = instruction.trim().split(/\s+/);
+        const command = parts[0].toLowerCase();
 
-    // Split by common separators (then, and then, next, after that, etc.)
-    const steps = flowInstruction.split(/\s+(?:then|and then|next|after that|,)\s+/i);
+        // Helper to resolve variables like {email}
+        const resolveValue = (val) => {
+            if (val && val.startsWith('{') && val.endsWith('}')) {
+                const key = val.slice(1, -1);
+                return args[key] || val;
+            }
+            return val;
+        };
 
-    for (const step of steps) {
-        const trimmed = step.trim();
-        if (!trimmed) continue;
+        const remaining = instruction.substring(command.length).trim();
 
-        // Navigate/Go to patterns
-        const navMatch = trimmed.match(/(?:navigate|go)\s+to\s+([^\s,]+)/i);
-        if (navMatch) {
-            // Allow bare domains by prefixing https:// when scheme is missing
-            const target = navMatch[1].match(/^https?:\/\//i) ? navMatch[1] : `https://${navMatch[1]}`;
-            plan.push({
-                type: 'navigate',
-                target,
-                description: trimmed
-            });
-            continue;
+        switch (command) {
+            case 'goto':
+            case 'navigate':
+                return { action: 'navigate', value: parts[1] };
+
+            case 'click':
+                return { action: 'click', target: remaining };
+
+            case 'fill':
+                // fill <selector> <value>
+                // We need to be careful about splitting because selector might have spaces? 
+                // Using a simple regex to separate: command selector value
+                // Assuming value is the last part
+                const fillMatch = remaining.match(/(.+)\s+(.+)$/);
+                if (fillMatch) {
+                    return {
+                        action: 'fill',
+                        target: fillMatch[1].trim(),
+                        value: resolveValue(fillMatch[2].trim())
+                    };
+                }
+                // If regex fails (no value?), return as is for error later
+                return { action: 'fill', target: remaining, value: '' };
+
+            case 'hover':
+                return { action: 'hover', target: remaining };
+
+            case 'wait':
+                return { action: 'wait', value: parts[1] }; // 'network' or ms
+
+            case 'go_back':
+            case 'back':
+                return { action: 'back' };
+
+            case 'go_forward':
+            case 'forward':
+                return { action: 'forward' };
+
+            case 'reload':
+            case 'refresh':
+                return { action: 'reload' };
+
+            default:
+                // Fallback for simple "click this" style if needed, 
+                // but we want structured instructions now.
+                // We'll treat the whole rest as a target for click if unknown? 
+                // Or just error. Let's error/warn.
+                return { action: 'unknown', original: instruction };
         }
-
-        // Back/return navigation
-        if (trimmed.match(/back\s+to\s+(?:home|homepage|previous\s+page)/i) || trimmed.match(/\bgo\s+back\b/i)) {
-            plan.push({
-                type: 'back',
-                description: trimmed
-            });
-            continue;
-        }
-
-        // Click patterns
-        const clickMatch = trimmed.match(/click\s+(?:on\s+)?(?:the\s+)?(.+)/i);
-        if (clickMatch) {
-            plan.push({
-                type: 'click',
-                target: clickMatch[1].trim(),
-                description: trimmed
-            });
-            continue;
-        }
-
-        // Common “first product” phrasing when missing explicit click verb
-        if (trimmed.match(/first\s+product/i)) {
-            plan.push({
-                type: 'click',
-                target: 'first product',
-                description: trimmed
-            });
-            continue;
-        }
-
-        // Fill/Enter patterns
-        const fillMatch = trimmed.match(/(?:fill|enter)\s+(.+?)\s+(?:with|in)\s+(.+)/i);
-        if (fillMatch) {
-            plan.push({
-                type: 'fill',
-                target: fillMatch[1].trim(),
-                value: fillMatch[2].trim(),
-                description: trimmed
-            });
-            continue;
-        }
-
-        // Wait patterns
-        if (trimmed.match(/wait/i)) {
-            plan.push({
-                type: 'wait',
-                description: trimmed
-            });
-            continue;
-        }
-
-        // If we can't parse it, add as unknown for debugging
-        console.warn(`Could not parse step: "${trimmed}"`);
-        plan.push({
-            type: 'unknown',
-            description: trimmed
-        });
-    }
-
-    return plan;
+    });
 }
 
 /**

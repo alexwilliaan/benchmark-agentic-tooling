@@ -149,6 +149,10 @@ export async function executeAction(locator, action, value = null) {
             await locator.selectOption(value);
             break;
 
+        case 'hover':
+            await locator.hover();
+            break;
+
         default:
             throw new Error(`Unknown action: ${action}`);
     }

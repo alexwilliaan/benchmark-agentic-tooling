@@ -9,70 +9,38 @@ import { generateSnapshot, getPageContext } from './snapshot.js';
 import { locateElement, executeAction } from './locator.js';
 
 /**
- * Execute a user flow with AI agent guidance
+ * Execute a deterministic user flow
  * @param {Page} page - Playwright page object
- * @param {string} flowDescription - Natural language flow description
- * @param {Function} agentDecide - Function that takes (snapshot, instruction, history) and returns {action, target, value}
- * @returns {Promise<object>} Execution result with history and metrics
+ * @param {Array} executionPlan - List of action objects
+ * @returns {Promise<object>} Execution result with history
  */
-export async function executeFlow(page, flowDescription, agentDecide) {
+export async function executeFlow(page, executionPlan) {
     const history = [];
     const startTime = Date.now();
     let stepCount = 0;
-    const maxSteps = 50; // Safety limit
 
-    console.log('🤖 Starting AI-driven flow execution');
-    console.log(`📝 Flow: ${flowDescription}`);
+    console.log('🤖 Starting explicit flow execution');
+    console.log(`📝 Plan: ${executionPlan.length} steps`);
     console.log('');
 
     try {
-        while (stepCount < maxSteps) {
-            console.log(`🔄 Loop iteration ${stepCount}/${maxSteps}`);
+        for (const step of executionPlan) {
             stepCount++;
-
-            // Get current page state
-            const context = await getPageContext(page);
-            const snapshot = await generateSnapshot(page);
-
-            console.log(`\n━━━ Step ${stepCount} ━━━`);
-            console.log(`📍 Current page: ${context.url}`);
-            console.log(`📄 Title: ${context.title}`);
-
-            // Get agent decision
-            console.log('🤔 Asking agent for next action...');
-            const decision = await agentDecide(snapshot, flowDescription, history);
-
-            // Check if flow is complete
-            if (decision.action === 'done') {
-                console.log('✅ Agent signaled flow completion');
-                break;
-            }
-
-            // Log the decision
-            console.log(`🎯 Action: ${decision.action}`);
-            if (decision.target) console.log(`   Target: "${decision.target}"`);
-            if (decision.value) console.log(`   Value: "${decision.value}"`);
+            console.log(`\n━━━ Step ${stepCount}: ${step.action} ━━━`);
 
             // Execute the action
-            await executeStep(page, decision);
+            await executeStep(page, step);
 
             // Record in history
-            // Capture what we attempted for validation/reporting
             history.push({
                 step: stepCount,
-                url: context.url,
-                action: decision.action,
-                target: decision.target,
-                // Keep navigation/back URLs, mask only potentially sensitive form fills
-                value: decision.action === 'fill' ? '***' : decision.value,
+                action: step.action,
+                target: step.target,
+                value: step.action === 'fill' ? '***' : step.value,
                 timestamp: Date.now() - startTime,
             });
 
             console.log('✓ Step completed');
-        }
-
-        if (stepCount >= maxSteps) {
-            throw new Error(`Flow exceeded maximum steps (${maxSteps}). Possible infinite loop.`);
         }
 
         const duration = Date.now() - startTime;
@@ -91,7 +59,6 @@ export async function executeFlow(page, flowDescription, agentDecide) {
     } catch (error) {
         // Detailed error reporting
         const context = await getPageContext(page);
-        const snapshot = await generateSnapshot(page);
 
         console.error('');
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -104,12 +71,9 @@ export async function executeFlow(page, flowDescription, agentDecide) {
         console.error(`Current URL: ${context.url}`);
         console.error(`Page Title: ${context.title}`);
         console.error('');
-        console.error('Available elements on page:');
-        console.error(snapshot);
-        console.error('');
         console.error('Action history:');
         history.forEach((h, i) => {
-            console.error(`  ${i + 1}. ${h.action} ${h.target || ''} at ${h.url}`);
+            console.error(`  ${i + 1}. ${h.action} ${h.target || ''} (${h.timestamp}ms)`);
         });
         console.error('');
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -149,7 +113,7 @@ async function waitForNetworkSettlement(page) {
     // Clean up listeners
     page.off('request', requestHandler);
     page.off('response', responseHandler);
-    
+
     console.log(`✓ Network settled after ${requestCount} requests`);
 }
 
@@ -167,33 +131,52 @@ async function executeStep(page, decision) {
                 throw new Error('Navigate action requires a URL value');
             }
             await page.goto(value, { waitUntil: 'load' });
-            
+
             // Wait for SPA content to load
             await page.waitForTimeout(3000);
-            
+
             // Ensure page is fully rendered
             await page.waitForFunction(() => {
-                return document.readyState === 'complete' && 
-                       document.body && 
-                       document.body.innerText.trim().length > 100;
+                return document.readyState === 'complete' &&
+                    document.body &&
+                    document.body.innerText.trim().length > 100;
             }, { timeout: 10000 });
             break;
 
         case 'wait':
-            // Wait for SPA to load
-            console.log('⏳ Waiting for page to fully load...');
-            await page.waitForTimeout(2000);
+            if (value === 'network') {
+                console.log('⏳ Waiting for network activity to settle...');
+                await waitForNetworkSettlement(page);
+            } else {
+                const ms = parseInt(value, 10) || 2000;
+                console.log(`⏳ Waiting for ${ms}ms...`);
+                await page.waitForTimeout(ms);
+            }
             break;
 
         case 'back':
-            // Navigate back in history (e.g., return to home)
-            console.log('↩️ Going back to previous page...');
+            // Navigate back in history
+            console.log('↩️ Going back...');
             await page.goBack({ waitUntil: 'load' });
-            await page.waitForTimeout(1500);
+            await page.waitForTimeout(500);
+            break;
+
+        case 'forward':
+            // Navigate forward
+            console.log('↪️ Going forward...');
+            await page.goForward({ waitUntil: 'load' });
+            await page.waitForTimeout(500);
+            break;
+
+        case 'reload':
+            console.log('🔄 Reloading page...');
+            await page.reload({ waitUntil: 'load' });
+            await page.waitForTimeout(1000);
             break;
 
         case 'click':
         case 'fill':
+        case 'hover':
         case 'clear':
         case 'check':
         case 'uncheck':
@@ -203,8 +186,6 @@ async function executeStep(page, decision) {
             }
             const locator = await locateElement(page, target);
             await executeAction(locator, action, value);
-
-
             break;
 
         default:
