@@ -14,7 +14,7 @@ Ensure the MCP server is running:
 - **Tool Name**: `run_flow`
 
 ## 3. Benchmark Scenarios
-Run each scenario **5 times** to calculate average duration and success rate.
+Run each scenario **10 times** to calculate average duration and success rate.
 
 ### Scenario A: Simple Navigation & Analysis
 **Goal**: Verify basic page load and metric extraction.
@@ -30,11 +30,11 @@ Run each scenario **5 times** to calculate average duration and success rate.
 
 ### Scenario B: Form Interaction (Simulated)
 **Goal**: Test `fill`, `click`, and selector resolution.
-- **URL**: `https://github.com/login` (or similar stable public form, strictly for testing selector logic, DO NOT LOG IN)
+- **URL**: `lojasurf.mercos.com/entrar` (or similar stable public form, strictly for testing selector logic, DO NOT LOG IN)
 - **Instructions**:
   ```json
   [
-    "navigate https://github.com/login",
+    "navigate https://lojasurf.mercos.com/entrar",
     "wait network",
     "fill #login_field test_user",
     "fill #password test_pass",
@@ -86,7 +86,6 @@ Run each scenario **5 times** to calculate average duration and success rate.
   [
     "navigate https://lojasurf.mercos.com/",
     "wait network",
-    "wait 5000",
     "click .catalog-item-b2b",
     "wait network"
   ]
@@ -125,14 +124,45 @@ For each run, the executing Agent should store the following data in a `benchmar
     "scenario": "A",
     "run_id": 1,
     "timestamp": "ISO_DATE",
-    "success": true,
-    "duration_ms": 1250,
-    "metrics": {
+    "vitals": {
       "lcp": 800,
-      "tbt": 50,
-      "jsHeapUsed": 1500000
+      "cls": 0.01,
+      "inp": 50
     },
-    "errors": []
+    "diagnostics": {
+      "longTasks": 5,
+      "longTasksTotalDuration": 300,
+      "scripts": []
+    },
+    "interactions": [],
+    "cdp": {
+      "tbt": 50,
+      "jsHeap": {
+        "usedMB": "150.00",
+        "totalMB": "200.00",
+        "limitMB": "4096.00"
+      },
+      "resources": {
+        "count": 45,
+        "totalSizeMB": "2.50",
+        "errors": []
+      },
+      "consoleErrors": []
+    },
+    "flow": {
+      "success": true,
+      "steps": 3,
+      "duration": 1250,
+      "history": [
+        {
+          "step": 1,
+          "action": "navigate",
+          "target": null,
+          "value": "https://example.com",
+          "timestamp": 500
+        }
+      ]
+    }
   }
 ]
 ```

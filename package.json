@@ -21,7 +21,8 @@
     "@modelcontextprotocol/sdk": "^1.24.3",
     "cors": "^2.8.5",
     "express": "^5.2.1",
-    "playwright": "^1.57.0"
+    "playwright": "^1.57.0",
+    "zod": "^4.2.1"
   },
   "packageManager": "pnpm@9.15.0"
 }

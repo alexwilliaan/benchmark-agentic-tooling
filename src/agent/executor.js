@@ -86,8 +86,33 @@ export async function executeFlow(page, executionPlan) {
 
 /**
  * Wait for network activity to settle before proceeding
+ * @param {Page} page
+ * @param {string} strategy - 'default', 'strict', 'sloppy'
  */
-async function waitForNetworkSettlement(page) {
+async function waitForNetworkSettlement(page, strategy = 'default') {
+    // Strategy mappings:
+    // strict: wait for true 0 connections (networkidle)
+    // default: wait for 2 seconds of idleness or max 15s
+    // sloppy: wait for minimal activity (e.g. just check load state)
+
+    if (strategy === 'strict') {
+        try {
+            await page.waitForLoadState('networkidle', { timeout: 20000 });
+            console.log('✓ Network idle (strict)');
+            return;
+        } catch (e) {
+            console.warn('⚠️ Strict network idle timed out, continuing...');
+        }
+    }
+
+    if (strategy === 'sloppy') {
+        await page.waitForLoadState('domcontentloaded');
+        await page.waitForTimeout(500); // Small buffer
+        console.log('✓ Network load (sloppy)');
+        return;
+    }
+
+    // Default 'soft' idle check
     let lastActivity = Date.now();
     let requestCount = 0;
 
@@ -114,7 +139,7 @@ async function waitForNetworkSettlement(page) {
     page.off('request', requestHandler);
     page.off('response', responseHandler);
 
-    console.log(`✓ Network settled after ${requestCount} requests`);
+    console.log(`✓ Network settled after ${requestCount} requests (default)`);
 }
 
 /**
@@ -145,13 +170,31 @@ async function executeStep(page, decision) {
 
         case 'wait':
             if (value === 'network') {
-                console.log('⏳ Waiting for network activity to settle...');
-                await waitForNetworkSettlement(page);
+                const strategy = decision.strategy || 'default';
+                console.log(`⏳ Waiting for network activity (${strategy})...`);
+                await waitForNetworkSettlement(page, strategy);
             } else {
                 const ms = parseInt(value, 10) || 2000;
                 console.log(`⏳ Waiting for ${ms}ms...`);
                 await page.waitForTimeout(ms);
             }
+            break;
+
+        case 'scroll':
+            // scroll top | bottom | selector
+            if (target === 'top') {
+                await page.evaluate(() => window.scrollTo(0, 0));
+            } else if (target === 'bottom') {
+                await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+            } else {
+                // Scroll to element
+                if (!target) {
+                    throw new Error('Scroll require a target (top, bottom, or selector)');
+                }
+                const locator = await locateElement(page, target);
+                await locator.scrollIntoViewIfNeeded();
+            }
+            await page.waitForTimeout(500); // Settle
             break;
 
         case 'back':

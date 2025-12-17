@@ -144,6 +144,16 @@ export async function executeAction(locator, action, value = null) {
             if (!value) {
                 throw new Error('Fill action requires a value');
             }
+            // Check if enabled first to give a better error message than generic timeout
+            try {
+                const isEnabled = await locator.isEnabled({ timeout: 1000 });
+                if (!isEnabled) {
+                    throw new Error('Element found but is disabled (not editable)');
+                }
+            } catch (e) {
+                // If checking enabled status fails (e.g. element gone), let standard fill handle it or rethrow
+                if (e.message.includes('Element found but is disabled')) throw e;
+            }
             await locator.fill(value);
             break;
 

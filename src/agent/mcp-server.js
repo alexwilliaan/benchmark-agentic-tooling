@@ -215,7 +215,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
  * @param {string[]} instructions 
  * @param {object} args 
  */
-function parseInstructions(instructions, args) {
+export function parseInstructions(instructions, args) {
     return instructions.map(instruction => {
         const parts = instruction.trim().split(/\s+/);
         const command = parts[0].toLowerCase();
@@ -245,29 +245,42 @@ function parseInstructions(instructions, args) {
 
             case 'fill':
                 // fill <selector> <value>
-                // We need to be careful about splitting because selector might have spaces? 
-                // Using a simple regex to separate: command selector value
-                // Assuming value is the last part
-                const fillMatch = remaining.match(/(.+)\s+(.+)$/);
-                if (fillMatch) {
-                    let target = fillMatch[1].trim();
+                // We split by the *first* space to get selector, then the rest is value (which might contain spaces)
+                // However, selectors can complex. But "fill #foo bar" -> selector=#foo, value=bar
+                // "fill .my-class John Doe" -> selector=.my-class, value=John Doe
+                const firstSpaceIdx = remaining.indexOf(' ');
+                if (firstSpaceIdx !== -1) {
+                    let target = remaining.substring(0, firstSpaceIdx).trim();
+                    let val = remaining.substring(firstSpaceIdx + 1).trim();
+
                     if (target.match(/^\d+_\d+$/)) { // Check if it's a UID
                         target = `[data-testid="${target}"]`;
                     }
                     return {
                         action: 'fill',
                         target: target,
-                        value: resolveValue(fillMatch[2].trim())
+                        value: resolveValue(val)
                     };
                 }
-                // If regex fails (no value?), return as is for error later
+                // Fallback: assume whole remaining string is target and value is missing (will error later)
                 return { action: 'fill', target: remaining, value: '' };
 
             case 'hover':
                 return { action: 'hover', target: remaining };
 
+            case 'scroll':
+                // scroll to top | scroll to bottom | scroll to <selector>
+                const scrollTarget = remaining.replace(/^to\s+/, '').trim();
+                return { action: 'scroll', target: scrollTarget };
+
             case 'wait':
-                return { action: 'wait', value: parts[1] }; // 'network' or ms
+                // wait network [strict|sloppy]
+                // wait 1000
+                if (parts[1] === 'network') {
+                    const strategy = parts[2] || 'default';
+                    return { action: 'wait', value: 'network', strategy };
+                }
+                return { action: 'wait', value: parts[1] };
 
             case 'go_back':
             case 'back':
@@ -357,7 +370,12 @@ async function main() {
     console.error('📊 Available tools: run_benchmark, run_flow, analyze_page');
 }
 
-main().catch((error) => {
-    console.error('❌ Server error:', error);
-    process.exit(1);
-});
+
+// Only run if executed directly
+import { fileURLToPath } from 'url';
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    main().catch((error) => {
+        console.error('❌ Server error:', error);
+        process.exit(1);
+    });
+}
