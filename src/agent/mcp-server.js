@@ -237,7 +237,11 @@ function parseInstructions(instructions, args) {
                 return { action: 'navigate', value: parts[1] };
 
             case 'click':
-                return { action: 'click', target: remaining };
+                let clickTarget = remaining.trim();
+                if (clickTarget.match(/^\d+_\d+$/)) { // Check if it's a UID
+                    clickTarget = `[data-testid="${clickTarget}"]`;
+                }
+                return { action: 'click', target: clickTarget };
 
             case 'fill':
                 // fill <selector> <value>
@@ -246,9 +250,13 @@ function parseInstructions(instructions, args) {
                 // Assuming value is the last part
                 const fillMatch = remaining.match(/(.+)\s+(.+)$/);
                 if (fillMatch) {
+                    let target = fillMatch[1].trim();
+                    if (target.match(/^\d+_\d+$/)) { // Check if it's a UID
+                        target = `[data-testid="${target}"]`;
+                    }
                     return {
                         action: 'fill',
-                        target: fillMatch[1].trim(),
+                        target: target,
                         value: resolveValue(fillMatch[2].trim())
                     };
                 }

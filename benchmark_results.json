@@ -1,0 +1,142 @@
+[
+  {
+    "scenario": "A",
+    "run_id": 1,
+    "timestamp": "2025-12-16T21:52:02.381Z",
+    "success": true,
+    "duration_ms": 5080,
+    "metrics": {
+      "lcp": 28,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 2,
+    "timestamp": "2025-12-16T21:52:12.410Z",
+    "success": true,
+    "duration_ms": 5040,
+    "metrics": {
+      "lcp": 60,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 3,
+    "timestamp": "2025-12-16T21:52:22.436Z",
+    "success": true,
+    "duration_ms": 5070,
+    "metrics": {
+      "lcp": 56,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 4,
+    "timestamp": "2025-12-16T21:52:32.474Z",
+    "success": true,
+    "duration_ms": 5080,
+    "metrics": {
+      "lcp": 32,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 5,
+    "timestamp": "2025-12-16T21:52:42.492Z",
+    "success": true,
+    "duration_ms": 5070,
+    "metrics": {
+      "lcp": 52,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "B",
+    "run_id": 1,
+    "timestamp": "2025-12-16T22:06:12.040Z",
+    "success": false,
+    "duration_ms": 0,
+    "metrics": {
+      "lcp": 0,
+      "tbt": 0,
+      "jsHeapUsed": 0
+    },
+    "errors": [
+      "locator.fill: Timeout 30000ms exceeded."
+    ]
+  },
+  {
+    "scenario": "B",
+    "run_id": 2,
+    "timestamp": "2025-12-16T22:06:51.197Z",
+    "success": false,
+    "duration_ms": 0,
+    "metrics": {
+      "lcp": 0,
+      "tbt": 0,
+      "jsHeapUsed": 0
+    },
+    "errors": [
+      "locator.fill: Timeout 30000ms exceeded."
+    ]
+  },
+  {
+    "scenario": "B",
+    "run_id": 3,
+    "timestamp": "2025-12-16T22:07:30.367Z",
+    "success": false,
+    "duration_ms": 0,
+    "metrics": {
+      "lcp": 0,
+      "tbt": 0,
+      "jsHeapUsed": 0
+    },
+    "errors": [
+      "locator.fill: Timeout 30000ms exceeded."
+    ]
+  },
+  {
+    "scenario": "B",
+    "run_id": 4,
+    "timestamp": "2025-12-16T22:08:09.739Z",
+    "success": false,
+    "duration_ms": 0,
+    "metrics": {
+      "lcp": 0,
+      "tbt": 0,
+      "jsHeapUsed": 0
+    },
+    "errors": [
+      "locator.fill: Timeout 30000ms exceeded."
+    ]
+  },
+  {
+    "scenario": "B",
+    "run_id": 5,
+    "timestamp": "2025-12-16T22:08:49.018Z",
+    "success": false,
+    "duration_ms": 0,
+    "metrics": {
+      "lcp": 0,
+      "tbt": 0,
+      "jsHeapUsed": 0
+    },
+    "errors": [
+      "locator.fill: Timeout 30000ms exceeded."
+    ]
+  }
+]

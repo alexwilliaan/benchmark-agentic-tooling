@@ -18,6 +18,23 @@ export async function locateElement(page, target) {
 
     // Try multiple strategies in order of reliability
     const strategies = [
+        // Strategy 0: Direct CSS/XPath selector (if target looks like one)
+        async () => {
+            // Simple heuristic: if it looks like a selector
+            if (cleanTarget.startsWith('#') || cleanTarget.startsWith('.') || cleanTarget.startsWith('[')) {
+                try {
+                    const locator = page.locator(cleanTarget);
+                    // Check if *any* count exists to consider it found.
+                    // Note: page.locator() doesn't throw on creation, only on action if strict.
+                    // But here we just want to know if it points to something.
+                    if (await locator.count() > 0) return locator.first();
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        },
+
         // Strategy 1: Try as button by role
         async () => {
             try {

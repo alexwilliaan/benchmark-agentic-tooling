@@ -1,0 +1,67 @@
+[
+  {
+    "scenario": "A",
+    "run_id": 1,
+    "timestamp": "2025-12-17T10:00:00.000Z",
+    "success": true,
+    "duration_ms": 5045,
+    "metrics": {
+      "lcp": 512,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 2,
+    "timestamp": "2025-12-17T10:00:10.000Z",
+    "success": true,
+    "duration_ms": 5049,
+    "metrics": {
+      "lcp": 136,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 3,
+    "timestamp": "2025-12-17T10:00:20.000Z",
+    "success": true,
+    "duration_ms": 5034,
+    "metrics": {
+      "lcp": 192,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 4,
+    "timestamp": "2025-12-17T10:00:30.000Z",
+    "success": true,
+    "duration_ms": 5053,
+    "metrics": {
+      "lcp": 192,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  },
+  {
+    "scenario": "A",
+    "run_id": 5,
+    "timestamp": "2025-12-17T10:00:40.000Z",
+    "success": true,
+    "duration_ms": 5054,
+    "metrics": {
+      "lcp": 188,
+      "tbt": 0,
+      "jsHeapUsed": 2233466.88
+    },
+    "errors": []
+  }
+]
